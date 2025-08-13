@@ -34,11 +34,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Restore user from localStorage if present
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
     setLoading(false);
   }, []);
 
@@ -59,7 +54,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           name: data.user.name
         };
         setUser(userObj);
-        localStorage.setItem('user', JSON.stringify(userObj));
         setLoading(false);
         return true;
       } else {
@@ -101,7 +95,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     // TODO: Implement logout with backend
     setUser(null);
-    localStorage.removeItem('user');
     setLoading(false);
   };
 
