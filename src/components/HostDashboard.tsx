@@ -106,9 +106,9 @@ const HostDashboard: React.FC = () => {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to create session');
-      // Generate QR code with a URL containing sessionId and timestamp for mobile browser compatibility
-      const qrUrl = `${window.location.origin}/student/attend?sessionId=${encodeURIComponent(data.session_id)}&t=${Date.now()}`;
-      const qrCodeDataUrl = await QRCode.toDataURL(qrUrl, {
+      // Generate QR code as a JSON string for student scanner compatibility
+      const qrData = JSON.stringify({ sessionId: data.session_id });
+      const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
         width: 256,
         margin: 2,
         color: {
