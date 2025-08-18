@@ -147,7 +147,15 @@ const StudentInterface: React.FC = () => {
         },
         body: JSON.stringify(requestBody)
       });
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (e) {
+        console.error('Failed to parse attendance response as JSON:', e);
+        setResult({ success: false, message: 'Invalid response from server.' });
+        return;
+      }
+      console.log('Attendance API response:', data);
       if (response.ok && (data.success || data._id)) {
         setResult({
           success: true,
@@ -159,6 +167,7 @@ const StudentInterface: React.FC = () => {
         setResult({ success: false, message: data.message || data.error || 'Failed to mark attendance.' });
       }
     } catch (err) {
+      console.error('Error in processQRCode:', err);
       setResult({ success: false, message: 'Error processing QR code.' });
     } finally {
       setLoading(false);
