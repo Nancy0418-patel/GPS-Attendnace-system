@@ -1,3 +1,5 @@
+// Use VITE_API_URL from environment, fallback to localhost
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useGeolocation } from '../contexts/GeolocationContext';
@@ -77,7 +79,7 @@ const HostDashboard: React.FC = () => {
     const fetchAttendance = async () => {
       if (currentSession && currentSession.session_id) {
         try {
-          const res = await fetch(`/api/attendance/session/${currentSession.session_id}`);
+          const res = await fetch(`${API_URL}/attendance/session/${currentSession.session_id}`);
           const data = await res.json();
           setAttendance(Array.isArray(data) ? data : []);
         } catch (err) {
@@ -99,7 +101,7 @@ const HostDashboard: React.FC = () => {
     setError('');
     try {
       // Call backend to create session (host location is fixed in backend)
-      const res = await fetch('http://localhost:4000/api/session', {
+      const res = await fetch(`${API_URL}/session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ host_id: user?.id || 'host' })

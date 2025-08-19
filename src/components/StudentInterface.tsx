@@ -1,3 +1,7 @@
+// src/components/StudentInterface.tsx
+
+// Use VITE_API_URL from environment, fallback to localhost
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useGeolocation } from '../contexts/GeolocationContext';
@@ -119,10 +123,21 @@ const StudentInterface: React.FC = () => {
         setResult({ success: false, message: 'Invalid QR code format.' });
         return;
       }
-      // Get geolocation
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 });
-      });
+      // Get geolocation with longer timeout
+      let position;
+      try {
+        position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 30000 });
+        });
+      } catch (geoError: any) {
+        let geoMsg = 'Unable to get your location. Please enable location and try again.';
+        if (geoError && geoError.code === 1) geoMsg = 'Location permission denied. Please allow location access and try again.';
+        if (geoError && geoError.code === 3) geoMsg = 'Location request timed out. Please ensure GPS/location is enabled and try again.';
+        setResult({ success: false, message: geoMsg });
+        setLoading(false);
+        setLocationLoading(false);
+        return;
+      }
       const { latitude, longitude } = position.coords;
       // Check for required user fields
       if (!user?.id || !user?.name) {
@@ -139,7 +154,7 @@ const StudentInterface: React.FC = () => {
         student_location_lng: longitude
       };
       console.log('Sending attendance request:', requestBody);
-      const response = await fetch('/api/attendance', {
+      const response = await fetch(`${API_URL}/attendance`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -174,26 +189,6 @@ const StudentInterface: React.FC = () => {
       setLocationLoading(false);
     }
   };
-
-  // Fetch recent attendance records
-  const fetchRecentAttendance = useCallback(async () => {
-    // TODO: Replace with backend API call to fetch recent attendance
-    setRecentAttendance([]);
-  }, [user]);
-
-  // Initialize component
-  useEffect(() => {
-    fetchRecentAttendance();
-  }, [fetchRecentAttendance]);
-
-  // Cleanup scanner on unmount
-  useEffect(() => {
-    return () => {
-      if (scanner) {
-        scanner.clear();
-      }
-    };
-  }, [scanner]);
 
   const startScanning = () => {
     setIsScanning(true);
@@ -334,6 +329,17 @@ const StudentInterface: React.FC = () => {
                         <Clock size={14} />
                         <span>Time: {format(new Date(result.timestamp), 'HH:mm:ss')}</span>
                       </div>
+                    </div>
+                  )}
+                  {/* Show retry button if location failed */}
+                  {!result.success && result.message && result.message.toLowerCase().includes('location') && (
+                    <div className="mt-3">
+                      <button
+                        onClick={() => setResult(null)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Try Again
+                      </button>
                     </div>
                   )}
                 </div>
