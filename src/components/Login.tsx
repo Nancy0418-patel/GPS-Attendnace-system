@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Users, GraduationCap, MapPin, QrCode, Shield } from 'lucide-react';
 
 const Login: React.FC = () => {
   const { user, login, register } = useAuth();
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [role, setRole] = useState<'host' | 'student'>('student');
   const [formData, setFormData] = useState({
@@ -36,6 +37,9 @@ const Login: React.FC = () => {
         success = await register(formData.email, formData.password, formData.name, role);
         if (!success) {
           setError('Registration failed. Please try again.');
+        } else {
+          // Redirect to dashboard after successful registration
+          navigate(`/${role}`);
         }
       }
     } catch (err) {

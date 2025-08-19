@@ -221,15 +221,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const data = await res.json();
       if (res.ok) {
+        // Auto-login after successful registration
+        const loginSuccess = await login(email, password, role);
         setLoading(false);
-        return true;
+        return loginSuccess;
       } else {
-        console.error('Registration error:', data.error);
+        alert(data.error || "Registration failed. Please try again.");
         setLoading(false);
         return false;
       }
     } catch (error) {
-      console.error('Registration failed:', error);
+      alert("Registration failed. Please try again.");
       setLoading(false);
       return false;
     }
