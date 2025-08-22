@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import AttendanceLogo from '../../attendance-logo.png';
 import LoadingSpinner from './LoadingSpinner';
+import { useNavigate } from 'react-router-dom';
 
 interface Session {
   id: string;
@@ -45,6 +46,7 @@ interface AttendanceRecord {
 
 const HostDashboard: React.FC = () => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const { requestLocation } = useGeolocation();
   const [currentSession, setCurrentSession] = useState<Session | null>(null);
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
@@ -81,7 +83,10 @@ const HostDashboard: React.FC = () => {
         try {
           const res = await fetch(`${API_URL}/attendance/session/${currentSession.session_id}`);
           const data = await res.json();
-          setAttendance(Array.isArray(data) ? data : []);
+          const attendanceArray = Array.isArray(data) ? data : [];
+          console.log('Fetched attendance:', attendanceArray);
+          console.log('Attendance records have IDs:', attendanceArray.map(r => ({ id: r.id, _id: r._id })));
+          setAttendance(attendanceArray);
         } catch (err) {
           // Optionally handle error
         }
@@ -100,11 +105,24 @@ const HostDashboard: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      // Call backend to create session (host location is fixed in backend)
+      // Try to get host's live location for accurate geofence
+      let hostLat: number | undefined;
+      let hostLng: number | undefined;
+      try {
+        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 15000 });
+        });
+        hostLat = position.coords.latitude;
+        hostLng = position.coords.longitude;
+      } catch (_) {
+        // If location fails, backend will fallback to default
+      }
+
+      // Call backend to create session
       const res = await fetch(`${API_URL}/session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ host_id: user?.id || 'host' })
+        body: JSON.stringify({ host_id: user?.id || 'host', host_location_lat: hostLat, host_location_lng: hostLng })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to create session');
@@ -132,8 +150,15 @@ const HostDashboard: React.FC = () => {
 
   const endSession = async () => {
     if (!currentSession) return;
-    // TODO: Implement backend call to end session
-    setCurrentSession(prev => prev ? { ...prev, is_active: false } : null);
+    try {
+      const res = await fetch(`${API_URL}/session/${currentSession.session_id}/end`, { method: 'POST' });
+      if (!res.ok) {
+        throw new Error('Failed to end session');
+      }
+      setCurrentSession(prev => prev ? { ...prev, is_active: false } : null);
+    } catch (err) {
+      console.error('Failed to end session:', err);
+    }
   };
 
   const exportAttendance = () => {
@@ -180,7 +205,7 @@ const HostDashboard: React.FC = () => {
             </div>
             <div className="flex items-center space-x-2">
               <button
-                onClick={() => window.location.href = '/host/profile'}
+                onClick={() => navigate('/host/profile')}
                 className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-blue-600 transition-colors focus:outline-none border border-gray-300 rounded-lg bg-white shadow-sm"
               >
                 <span>Profile</span>
@@ -328,9 +353,9 @@ const HostDashboard: React.FC = () => {
             </div>
 
             <div className="space-y-3">
-              {attendance.map((record) => (
+              {attendance.map((record, index) => (
                 <div
-                  key={record.id}
+                  key={record.id || `attendance-${index}`}
                   className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200"
                 >
                   <div className="flex items-center space-x-3">
